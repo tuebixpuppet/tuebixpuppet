@@ -1,0 +1,635 @@
+<!doctype html>
+
+
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1024" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Puppet II: Strukturierte Puppet-Umgebung</title>
+    
+    <meta name="description" content="Fortgeschrittene Puppet Administration mit Hiera, Hiera eyaml und Rollen" />
+    <meta name="author" content="Torsten Kockler" />
+
+    <link href="google-fonts/google-fonts.css" rel="stylesheet" />
+
+    <link href="css/puppet.css" rel="stylesheet" />
+    
+    <link rel="shortcut icon" href="favicon.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <script src="js/puppet.js"></script>
+</head>
+
+<body class="impress-not-supported">
+
+
+<div class="fallback-message">
+    <p>Your browser <b>doesn't support the features required</b> by impress.js, so you are presented with a simplified version of this presentation.</p>
+    <p>For the best experience please use the latest <b>Chrome</b>, <b>Safari</b> or <b>Firefox</b> browser.</p>
+</div>
+
+<div id="impress">
+
+    <div id="title" class="step slide" data-x="0" data-y="0">
+        <br />
+        <q><center><strong>Puppet II:</strong> <br /> Strukturierte Puppet-Umgebung</center></q><br /><br />
+        <p><center>Torsten Kockler</center></p>
+    </div>
+
+    <div class="step slide" data-x="0" data-y="0" data-z="-1200">
+        <q><strong>Die bisherige Konfiguration</strong></q>
+        <center><img height="300px" src="pics/gears.jpg" /></center>
+    </div>
+
+    <div class="step slide" data-x="0" data-y="0" data-z="-2400">
+        <center>
+          <img src="pics/puppetuebersicht.png" />
+        </center>
+    </div>
+
+    <div class="slide step" data-x="0" data-y="0" data-z="-3600">
+      <strong>Vereinfachte Verzeichnisansicht auf puppetmaster1</strong><br /><br />
+      <pre class="big">
+/etc/puppet
+     ├── environments
+     │   ├── production
+     │   │   ├── manifests
+     │   │   │   ├── constants.pp
+     │   │   │   └── nodes.pp
+     │   │   └── modules
+     │   │       ├── bashrc
+     │   │       ├── ssh
+     │   │       └── testmodul
+     │   └── testing
+     ├── manifests
+     ├── modules
+     └── puppet.conf
+      </pre>
+    </div>
+
+<!-- STEP -->
+    <div id="kapitel1" class="step" data-x="0" data-y="-1000">
+      <q><img src="pics/schritt-links.png" /><strong>Schritt 1: </strong>Daten verwalten mit Hiera</q>
+    </div>
+<!-- /STEP -->
+
+    <div class="step slide" data-x="-1500" data-y="-1000" data-z="500" data-rotate-x="-90" data-rotate-y="90">
+        <q><strong>Das Problem</strong></q>
+        <center><img height="300px" src="pics/problem.jpg" /></center>
+    </div>
+
+    <div class="step slide" data-x="-3000" data-y="-1000" data-z="1000" data-rotate-x="-100" data-rotate-y="90">
+        <q><strong>constants.pp</strong></q><br />
+      <pre class="big">
+$hostcolors = {
+  puppet1 => "\[\033[01;34m\]",
+  puppet2 => "\[\033[01;35m\]",
+  puppet3 => "\[\033[01;36m\]",
+}
+      </pre>
+    </div>
+
+    <div class="step slide" data-x="-4500" data-y="-1000" data-z="1500" data-rotate-x="-110" data-rotate-y="90">
+        <q><strong>Hash $hostcolors</strong></q><br />
+        Mit allen <strong>drei</strong> Werten wird von jedem Puppet-Agent geladen.<br /><br />
+        Nur <strong>ein</strong> Wert wird benötigt.
+    </div>
+
+    <div class="step slide" data-x="-6000" data-y="-1000" data-z="2000" data-rotate-x="-120" data-rotate-y="90">
+        <q><strong>Hiera</strong></q><br />
+        Hierarchische Organisation von Daten in yaml-Dateien<br />
+        <center><img src="pics/stones.jpg" height=300px" /></center>
+    </div>
+
+    <div class="step slide" data-x="-7500" data-y="-1000" data-z="2500" data-rotate-x="-130" data-rotate-y="90">
+        <strong>YAML</strong><br /><br />
+        <strong>Variable</strong><br />
+<pre class="big">        
+key: value
+</pre><br />
+        <strong>Array</strong><br />
+<pre class="big">        
+arrayname:
+  - value1
+  - value2
+</pre><br />
+        <strong>Hash</strong><br />
+<pre class="big">        
+hashname:
+  key1: value1
+  key2: value2
+</pre>
+    </div>
+
+    <div class="step slide" data-x="-9000" data-y="-1000" data-z="3000" data-rotate-x="-140" data-rotate-y="90">
+        <q><strong>Hierarchie - Beispiel</strong></q><br />
+        defaults.yaml ⇦ Überschreibt %{clientcert}.yaml<br />
+        %{clientcert}.yaml ⇦ Überschreibt %{environment}.yaml<br />
+        %{environment}.yaml ⇦ Überschreibt global.yaml<br />
+        global.yaml ⇦ Wird zuerst geladen<br /><br /><br />
+        <strong>%{<em>VARIABLE</em>} wird durch den Wert von <em>VARIABLE</em> ersetzt</strong>
+    </div>
+
+    <div class="step slide" data-x="-10500" data-y="-1000" data-z="3500" data-rotate-x="-150" data-rotate-y="90">
+        <q><strong>Nutzung von Hiera Variablen</strong></q><br />
+        Bisher:<br />
+        Zugriff auf Hash <strong>$hostcolors</strong> in constants.pp mit Key <strong>$hostname</strong> von facter:<br /><br />
+        $hostcolor = $hostcolors[$hostname]<br />
+    </div>
+
+    <div class="step slide" data-x="-12000" data-y="-1000" data-z="4000" data-rotate-x="-160" data-rotate-y="90">
+        <q><strong>Nutzung von Hiera Variablen</strong></q><br />
+        Jetzt:<br />
+        <strong>Variable <em>hostcolor</em> für jeden Host separat definiert in<br />%{<em>clientcert</em>}.yaml-Dateien</strong><br /><br />
+        Zugriff über hiera auf Variable <strong>hostcolor</strong>:<br /><br />
+        $hostcolor = hiera("hostcolor")
+    </div>
+
+    <div class="box puppetmaster1 step visible" data-x="0" data-y="1000" data-z="4000" data-rotate-x="270" data-rotate-y="180">
+       <div class="servername">
+         puppetmaster1
+       </div>
+       <div class="console">
+       </div>
+    </div>
+
+<!-- ###1 -->
+    <div id="video-step100" class="box visible step" data-x="0" data-y="1000" data-z="4000" data-rotate-x="270" data-rotate-y="180">
+      <div class="servername"></div>
+      <div class="video">
+        <video height="650px" style="display:none;" id="puppetmaster1" controls onended=unloadVideo("puppetmaster1");>
+          <source src="videos/100-puppetmaster1.avi" type="video/mp4" />
+        </video>
+      </div>
+      <script language="javascript" type="text/javascript">
+        var videoStep100 = document.getElementById("video-step100");
+        var puppetmaster1 = document.getElementById("puppetmaster1");
+        videoStep100.addEventListener("impress:stepenter", function() {
+          puppetmaster1.src = "videos/100-puppetmaster1.avi";
+          puppetmaster1.load();
+          puppetmaster1.style.display = 'block';
+          puppetmaster1.currentTime = 0;
+          if (puppetmaster1.requestFullscreen) { 
+            puppetmaster1.requestFullscreen();
+          } else if (puppetmaster1.mozRequestFullScreen) { 
+            puppetmaster1.mozRequestFullScreen();
+          } else if (puppetmaster1.webkitRequestFullscreen) { 
+            puppetmaster1.webkitRequestFullscreen();
+          }
+          puppetmaster1.play();
+        }, false);
+        videoStep100.addEventListener("impress:stepleave", function () {
+          puppetmaster1.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppetmaster1.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- ###1 -->
+
+    <div class="box puppet1 step visible" data-x="-1000" data-y="0" data-z="4000" data-rotate-x="270" data-rotate-y="90">
+               <div class="servername">
+                 puppet1
+       </div>
+       <div class="console">
+       </div>
+    </div>
+
+<!-- ###2 -->
+    <div id="video-step101" class="box visible step" data-x="-1000" data-y="0" data-z="4000" data-rotate-x="270" data-rotate-y="90">
+      <div class="servername"></div>
+      <div class="video">
+        <video height="650px" style="display:none;" id="puppet1" controls onended=unloadVideo("puppet1");>
+          <source src="videos/101-puppet1.avi" type="video/mp4" />
+        </video>
+      </div>
+      <script language="javascript" type="text/javascript">
+        var videoStep101 = document.getElementById("video-step101");
+        var puppet1 = document.getElementById("puppet1");
+        videoStep101.addEventListener("impress:stepenter", function() {
+          puppet1.src = "videos/101-puppet1.avi";
+          puppet1.load();
+          puppet1.style.display = 'block';
+          puppet1.currentTime = 0;
+          if (puppet1.requestFullscreen) { 
+            puppet1.requestFullscreen();
+          } else if (puppet1.mozRequestFullScreen) { 
+            puppet1.mozRequestFullScreen();
+          } else if (puppet1.webkitRequestFullscreen) { 
+            puppet1.webkitRequestFullscreen();
+          } 
+          puppet1.play();
+        }, false);
+        videoStep101.addEventListener("impress:stepleave", function () {
+          puppet1.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppet1.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- ###2 -->
+
+
+<!-- STEP -->
+    <div id="kapitel2" class="step" data-x="200" data-y="-1500">
+      <q><img src="pics/schritt-rechts.png" /><strong>Schritt 2: </strong>Noch mehr Hiera</q>
+    </div>
+<!-- /STEP -->
+
+
+    <div class="step slide" data-x="1500" data-y="-1500" data-z="500" data-rotate-x="-90" data-rotate-y="-90">
+        <q><strong>Hiera</strong></q>
+        <q>Mit dem Befehl hiera können Hieradaten auf der Konsole ausgegeben werden.</q>
+    </div>
+
+    <div class="step slide" data-x="3000" data-y="-1500" data-z="1000" data-rotate-x="-80" data-rotate-y="-90">
+        <q>Ausgeben von Strings</q>
+        hiera<br />
+        <q>Ausgeben von Arrays</q>
+        hiera -a<br />
+        <q>Ausgeben von Hashes</q>
+        hiera -h<br />
+    </div>
+
+    <div class="step slide" data-x="4500" data-y="-1500" data-z="1500" data-rotate-x="-70" data-rotate-y="-90">
+        <q><strong>environment und clientcert<br /> können angegeben werden:</strong></q><br />
+        hiera meinwert clientcert=puppet1.localdomain environment=production
+    </div>
+
+<!-- +++1 -->
+    <div class="box step" data-x="0" data-y="1000" data-z="4000" data-rotate-x="270" data-rotate-y="180">
+    </div>
+    <div id="video-step102" class="box step" data-x="0" data-y="1000" data-z="4000" data-rotate-x="270" data-rotate-y="180">
+      <script language="javascript" type="text/javascript">
+        var videoStep102 = document.getElementById("video-step102");
+        var puppetmaster1 = document.getElementById("puppetmaster1");
+        videoStep102.addEventListener("impress:stepenter", function() {
+          puppetmaster1.src = "videos/102-puppetmaster1.avi";
+          puppetmaster1.load();
+          puppetmaster1.style.display = 'block';
+          puppetmaster1.currentTime = 0;
+          if (puppetmaster1.requestFullscreen) { 
+            puppetmaster1.requestFullscreen();
+          } else if (puppetmaster1.mozRequestFullScreen) { 
+            puppetmaster1.mozRequestFullScreen();
+          } else if (puppetmaster1.webkitRequestFullscreen) { 
+            puppetmaster1.webkitRequestFullscreen();
+          } 
+          puppetmaster1.play();
+        }, false);
+        videoStep102.addEventListener("impress:stepleave", function () {
+          puppetmaster1.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppetmaster1.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- +++1 -->
+
+
+    <div class="box puppet2 step visible" data-x="0" data-y="-1000" data-z="4000" data-rotate-x="270" data-rotate-y="0">
+       <div class="servername">
+         puppet2
+       </div>
+       <div class="console">
+       </div>
+    </div>
+
+<!-- ###3 -->
+    <div id="video-step103" class="box visible step" data-x="0" data-y="-1000" data-z="4000" data-rotate-x="270" data-rotate-y="0">
+      <div class="servername"></div>
+      <div class="video">
+        <video height="650px" style="display:none;" id="puppet2" controls onended=unloadVideo("puppet2");>
+          <source src="videos/103-puppet2.avi" type="video/mp4" />
+        </video>
+      </div>
+      <script language="javascript" type="text/javascript">
+        var videoStep103 = document.getElementById("video-step103");
+        var puppet2 = document.getElementById("puppet2");
+        videoStep103.addEventListener("impress:stepenter", function() {
+          puppet2.src = "videos/103-puppet2.avi";
+          puppet2.load();
+          puppet2.style.display = 'block';
+          puppet2.currentTime = 0;
+          if (puppet2.requestFullscreen) { 
+            puppet2.requestFullscreen();
+          } else if (puppet2.mozRequestFullScreen) { 
+            puppet2.mozRequestFullScreen();
+          } else if (puppet2.webkitRequestFullscreen) { 
+            puppet2.webkitRequestFullscreen();
+          }
+          puppet2.play();
+        }, false);
+        videoStep103.addEventListener("impress:stepleave", function () {
+          puppet2.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppet2.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- ###3 -->
+
+    <div class="box puppet3 step visible" data-x="1000" data-y="0" data-z="4000" data-rotate-x="270" data-rotate-y="-90">
+               <div class="servername">
+                 puppet3
+       </div>
+       <div class="console">
+       </div>
+    </div>
+
+<!-- ###4 -->
+    <div id="video-step104" class="box visible step" data-x="1000" data-y="0" data-z="4000" data-rotate-x="270" data-rotate-y="-90">
+      <div class="servername"></div>
+      <div class="video">
+        <video height="650px" style="display:none;" id="puppet3" controls onended=unloadVideo("puppet3");>
+          <source src="videos/104-puppet3.avi" type="video/mp4" />
+        </video>
+      </div>
+      <script language="javascript" type="text/javascript">
+        var videoStep104 = document.getElementById("video-step104");
+        var puppet3 = document.getElementById("puppet3");
+        videoStep104.addEventListener("impress:stepenter", function() {
+          puppet3.src = "videos/104-puppet3.avi";
+          puppet3.load();
+          puppet3.style.display = 'block';
+          puppet3.currentTime = 0;
+          if (puppet3.requestFullscreen) { 
+            puppet3.requestFullscreen();
+          } else if (puppet3.mozRequestFullScreen) { 
+            puppet3.mozRequestFullScreen();
+          } else if (puppet3.webkitRequestFullscreen) { 
+            puppet3.webkitRequestFullscreen();
+          } 
+          puppet3.play();
+        }, false);
+        videoStep104.addEventListener("impress:stepleave", function () {
+          puppet3.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppet3.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- ###4 -->
+
+<!-- STEP -->
+    <div id="kapitel3" class="step" data-x="0" data-y="-2000">
+      <q><img src="pics/schritt-links.png" /><strong>Schritt 3: </strong>Hiera Backend eyaml</q>
+    </div>
+<!-- /STEP -->
+
+    <div class="step slide" data-x="-1500" data-y="-2000" data-z="0" data-rotate-x="-90" data-rotate-y="90" data-scale="1">
+    <q><strong>Dank Hiera ...</strong></q><br />
+    <q>... Daten und Puppetcode sind nun getrennt.</q>
+    </div>
+
+    <div class="step slide" data-x="-3000" data-y="-2000" data-z="-500" data-rotate-x="-80" data-rotate-y="90" data-scale="0.9">
+    <q><strong>Jetzt ist alles gut.<br />
+    Oder?</strong></q><br />
+    <center><img height="300px" src="pics/accidental-slip.jpg" /><center>
+    </div>
+
+    <div class="step slide" data-x="-4500" data-y="-2000" data-z="-1000" data-rotate-x="-70" data-rotate-y="90" data-scale="0.8">
+    <q>Hiera Daten liegen unverschlüsselt in yaml-Dateien.</q>
+    <q><strong>Auch Passwörter!</strong></q>
+    </div>
+
+    <div class="step slide" data-x="-6000" data-y="-2000" data-z="-1500" data-rotate-x="-60" data-rotate-y="90" data-scale="0.7">
+    <q><strong>hiera-eyaml</strong></q>
+    <q>Backend für Hiera</q>
+    </div>
+
+    <div class="step slide" data-x="-7500" data-y="-2000" data-z="-2000" data-rotate-x="-50" data-rotate-y="90" data-scale="0.6">
+    <q>Verschlüsselung von Werten in yaml-Dateien<br /><br />
+    <strong>Private-/Publickey-Verfahren</strong></q>
+    <center><img src="pics/keys.jpg" height="200px" /></center>
+    </div>
+
+<!-- +++1 -->
+    <div class="box step" data-x="0" data-y="1000" data-z="4000" data-rotate-x="270" data-rotate-y="180">
+    </div>
+    <div id="video-step105" class="box step" data-x="0" data-y="1000" data-z="4000" data-rotate-x="270" data-rotate-y="180">
+      <script language="javascript" type="text/javascript">
+        var videoStep105 = document.getElementById("video-step105");
+        var puppetmaster1 = document.getElementById("puppetmaster1");
+        videoStep105.addEventListener("impress:stepenter", function() {
+          puppetmaster1.src = "videos/105-puppetmaster1.avi";
+          puppetmaster1.load();
+          puppetmaster1.style.display = 'block';
+          puppetmaster1.currentTime = 0;
+          if (puppetmaster1.requestFullscreen) { 
+            puppetmaster1.requestFullscreen();
+          } else if (puppetmaster1.mozRequestFullScreen) { 
+            puppetmaster1.mozRequestFullScreen();
+          } else if (puppetmaster1.webkitRequestFullscreen) { 
+            puppetmaster1.webkitRequestFullscreen();
+          } 
+          puppetmaster1.play();
+        }, false);
+        videoStep105.addEventListener("impress:stepleave", function () {
+          puppetmaster1.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppetmaster1.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- +++1 -->
+
+<!-- +++3 -->
+    <div class="box step" data-x="0" data-y="-1000" data-z="4000" data-rotate-x="270" data-rotate-y="0">
+    </div>
+    <div id="video-step106" class="box step" data-x="0" data-y="-1000" data-z="4000" data-rotate-x="270" data-rotate-y="0">
+      <script language="javascript" type="text/javascript">
+        var videoStep106 = document.getElementById("video-step106");
+        var puppet2 = document.getElementById("puppet2");
+        videoStep106.addEventListener("impress:stepenter", function() {
+          puppet2.src = "videos/106-puppet2.avi";
+          puppet2.load();
+          puppet2.style.display = 'block';
+          puppet2.currentTime = 0;
+          if (puppet2.requestFullscreen) { 
+            puppet2.requestFullscreen();
+          } else if (puppet2.mozRequestFullScreen) { 
+            puppet2.mozRequestFullScreen();
+          } else if (puppet2.webkitRequestFullscreen) { 
+            puppet2.webkitRequestFullscreen();
+          } 
+          puppet2.play();
+        }, false);
+        videoStep106.addEventListener("impress:stepleave", function () {
+          puppet2.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppet2.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- +++3 -->
+
+
+<!-- STEP -->
+    <div id="kapitel4" class="step" data-x="200" data-y="-2500">
+      <q><img src="pics/schritt-rechts.png" /><strong>Schritt 4: </strong>Rollen</q>
+    </div>
+<!-- /STEP -->
+
+    <div class="step slide" data-x="1500" data-y="-2500" data-z="0" data-rotate-x="-90" data-rotate-y="-90" data-scale="1">
+    <q><strong>Unschön ist noch ...</strong></q><br />
+    <q>die Datei nodes.pp</q>
+    </div>
+
+    <div class="step slide" data-x="3000" data-y="-2500" data-z="-500" data-rotate-x="-100" data-rotate-y="-90" data-scale="0.9">
+    <q><strong>Lösung</strong><br />
+    Über Hiera jedem Puppet-Agent Rollen zuteilen</q><br />
+    <center><img height="300px" src="pics/maki.jpg" /><center>
+    </div>
+
+    <div class="step slide" data-x="4500" data-y="-2500" data-z="-1000" data-rotate-x="-110" data-rotate-y="-90" data-scale="0.8">
+    <q>Mit der Funtion</q>
+    <q><strong>hiera_include()</strong> lassen sich dann die den Rolle zugehörigen Module inkludieren.</q>
+    </div>
+
+
+<!-- +++1 -->
+    <div class="box step" data-x="0" data-y="1000" data-z="4000" data-rotate-x="270" data-rotate-y="180">
+    </div>
+    <div id="video-step107" class="box step" data-x="0" data-y="1000" data-z="4000" data-rotate-x="270" data-rotate-y="180">
+      <script language="javascript" type="text/javascript">
+        var videoStep107 = document.getElementById("video-step107");
+        var puppetmaster1 = document.getElementById("puppetmaster1");
+        videoStep107.addEventListener("impress:stepenter", function() {
+          puppetmaster1.src = "videos/107-puppetmaster1.avi";
+          puppetmaster1.load();
+          puppetmaster1.style.display = 'block';
+          puppetmaster1.currentTime = 0;
+          if (puppetmaster1.requestFullscreen) { 
+            puppetmaster1.requestFullscreen();
+          } else if (puppetmaster1.mozRequestFullScreen) { 
+            puppetmaster1.mozRequestFullScreen();
+          } else if (puppetmaster1.webkitRequestFullscreen) { 
+            puppetmaster1.webkitRequestFullscreen();
+          } 
+          puppetmaster1.play();
+        }, false);
+        videoStep107.addEventListener("impress:stepleave", function () {
+          puppetmaster1.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppetmaster1.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- +++1 -->
+
+<!-- +++3 -->
+    <div class="box step" data-x="0" data-y="-1000" data-z="4000" data-rotate-x="270" data-rotate-y="0">
+    </div>
+    <div id="video-step108" class="box step" data-x="0" data-y="-1000" data-z="4000" data-rotate-x="270" data-rotate-y="0">
+      <script language="javascript" type="text/javascript">
+        var videoStep108 = document.getElementById("video-step108");
+        var puppet2 = document.getElementById("puppet2");
+        videoStep108.addEventListener("impress:stepenter", function() {
+          puppet2.src = "videos/108-puppet2.avi";
+          puppet2.load();
+          puppet2.style.display = 'block';
+          puppet2.currentTime = 0;
+          if (puppet2.requestFullscreen) { 
+            puppet2.requestFullscreen();
+          } else if (puppet2.mozRequestFullScreen) { 
+            puppet2.mozRequestFullScreen();
+          } else if (puppet2.webkitRequestFullscreen) { 
+            puppet2.webkitRequestFullscreen();
+          } 
+          puppet2.play();
+        }, false);
+        videoStep108.addEventListener("impress:stepleave", function () {
+          puppet2.pause();
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          puppet2.style.display = 'none';
+
+        }, false);
+      </script>
+    </div>
+<!-- +++3 -->
+
+    <div id="end" class="step slide" data-x="0" data-y="-3000" data-z="-500">
+        <br />
+        <q><center><strong>Ende</strong></center></q><br />
+        <center><img height="350px" src="pics/tower.jpg" /></center>
+    </div>
+
+    <div id="questions" class="step" data-x="0" data-y="0" data-z="7000">
+      <img src="pics/butterfly.gif" style="position: absolute; top: 0px; left:500px; -webkit-transform: rotate(-20deg); -moz-transform: rotate(-20deg); -o-transform: rotate(-20deg); transform: rotate(-20deg);" />
+      <center><strong>Fragen?</strong></center>
+    </div> 
+
+
+
+
+<script src="js/impress.js"></script>
+<script>impress().init();</script>
+
+
+</body>
+</html>
+
+
